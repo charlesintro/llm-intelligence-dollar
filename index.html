@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Intelligence per Dollar</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=JetBrains+Mono:wght@300;400;500&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ink: #1a1208;
+    --paper: #f5f0e8;
+    --cream: #ede7d4;
+    --aged: #d4c9a8;
+    --muted: #6b5d47;
+    --rust: #c2440e;
+    --green: #2d8a5a;
+    --red: #c84040;
+  }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    padding: 0;
+  }
+  .wrapper {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 48px 32px 80px;
+  }
+  header {
+    text-align: center;
+    margin-bottom: 48px;
+    padding-bottom: 36px;
+    border-bottom: 3px double var(--aged);
+  }
+  .eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(34px, 5.5vw, 64px);
+    font-weight: 900;
+    line-height: 1.05;
+  }
+  h1 .accent { color: var(--rust); font-style: italic; }
+  .subtitle {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    margin-top: 14px;
+  }
+  .benchmark-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 32px;
+    border: 1.5px solid var(--aged);
+    width: fit-content;
+  }
+  .tab-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    padding: 10px 20px;
+    background: transparent;
+    color: var(--muted);
+    border: none;
+    border-right: 1px solid var(--aged);
+    cursor: pointer;
+    transition: all 0.12s;
+    white-space: nowrap;
+  }
+  .tab-btn:last-child { border-right: none; }
+  .tab-btn:hover { background: var(--cream); color: var(--ink); }
+  .tab-btn.active { background: var(--ink); color: var(--paper); }
+  .metric-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+  .metric-label {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+  .metric-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 6px 14px;
+    background: transparent;
+    color: var(--muted);
+    border: 1.5px solid var(--aged);
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .metric-btn:hover { border-color: var(--ink); color: var(--ink); }
+  .metric-btn.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .bench-desc {
+    background: var(--cream);
+    border-left: 3px solid var(--rust);
+    padding: 14px 18px;
+    margin-bottom: 32px;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .bench-desc strong { color: var(--ink); }
+  canvas#mainCanvas {
+    display: block;
+    width: 100%;
+  }
+  .legend {
+    display: flex;
+    gap: 20px;
+    margin-top: 18px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .legend-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  footer {
+    margin-top: 56px;
+    padding-top: 20px;
+    border-top: 1px solid var(--aged);
+    font-size: 10px;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.9;
+    letter-spacing: 0.04em;
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <header>
+    <div class="eyebrow">LLM Intelligence · Benchmark Performance · March 2026</div>
+    <h1>How much intelligence<br>does <span class="accent">$1</span> buy?</h1>
+    <p class="subtitle">Correct answers per dollar — with doubt woven in</p>
+  </header>
+  <div class="benchmark-tabs" id="benchTabs"></div>
+  <div class="metric-row">
+    <span class="metric-label">Metric:</span>
+    <button class="metric-btn active" id="btn-raw" onclick="setMetric('raw')">Raw answers per $1</button>
+    <button class="metric-btn" id="btn-adj" onclick="setMetric('adj')">Above-chance answers per $1</button>
+  </div>
+  <div class="bench-desc" id="benchDesc"></div>
+  <canvas id="mainCanvas"></canvas>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-swatch" style="background:#2d8a5a;"></div>Correct</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#c84040;"></div>Wrong / doubt</div>
+  </div>
+  <footer>
+    Prices current as of March 2026 · Input + output tokens blended per question · Scores from published benchmarks<br>
+    GPQA: 198 questions · SWE-bench Verified: 500 tasks · MATH-500: 500 problems · MMLU-Pro: 12,000 questions (sample)<br>
+    "Above-chance" rescales score from random baseline to 100% — only applies to multiple-choice benchmarks
+  </footer>
+</div>
+<script>
+const BENCHMARKS = {
+  gpqa: {
+    label: 'GPQA Diamond',
+    sublabel: 'PhD-level science',
+    tokensPerQ: 700,
+    chance: 0.25,
+    isMC: true,
+    desc: '<strong>GPQA Diamond</strong> — 198 graduate-level questions in biology, physics, and chemistry. Written by domain experts; even skilled non-experts with web access score only ~34%. 4-choice multiple choice, so random guessing = 25%. Human PhD experts score ~65–69%.',
+    models: [
+      { name: 'GPT-5 Nano',        cost: 0.050, acc: 0.58 },
+      { name: 'Gemini Flash-Lite', cost: 0.075, acc: 0.62 },
+      { name: 'Llama 4 Maverick',  cost: 0.10,  acc: 0.68 },
+      { name: 'DeepSeek V3.2',     cost: 0.14,  acc: 0.72 },
+      { name: 'Grok 4.1',          cost: 0.20,  acc: 0.84 },
+      { name: 'Gemini 2.5 Flash',  cost: 0.30,  acc: 0.86 },
+      { name: 'Claude Haiku 4.5',  cost: 1.00,  acc: 0.72 },
+      { name: 'GPT-5',             cost: 1.25,  acc: 0.88 },
+      { name: 'GPT-5.2',           cost: 1.75,  acc: 0.924 },
+      { name: 'Gemini 3.1 Pro',    cost: 2.00,  acc: 0.941 },
+      { name: 'Claude Sonnet 4.6', cost: 3.00,  acc: 0.899 },
+      { name: 'Claude Opus 4.6',   cost: 5.00,  acc: 0.913 },
+    ]
+  },
+  swebench: {
+    label: 'SWE-bench',
+    sublabel: 'Real coding tasks',
+    tokensPerQ: 25000,
+    chance: 0,
+    isMC: false,
+    desc: '<strong>SWE-bench Verified</strong> — 500 real GitHub issues. Models must write code that passes unit tests on actual open-source repos. No multiple choice — it either works or it doesn\'t. No random baseline applies. Tokens per task are much higher (~25k) reflecting full repo context.',
+    models: [
+      { name: 'GPT-5 Nano',        cost: 0.050, acc: 0.22 },
+      { name: 'Gemini Flash-Lite', cost: 0.075, acc: 0.24 },
+      { name: 'Llama 4 Maverick',  cost: 0.10,  acc: 0.28 },
+      { name: 'DeepSeek V3.2',     cost: 0.14,  acc: 0.42 },
+      { name: 'Grok 4.1',          cost: 0.20,  acc: 0.52 },
+      { name: 'Gemini 2.5 Flash',  cost: 0.30,  acc: 0.58 },
+      { name: 'Claude Haiku 4.5',  cost: 1.00,  acc: 0.56 },
+      { name: 'GPT-5',             cost: 1.25,  acc: 0.68 },
+      { name: 'GPT-5.2',           cost: 1.75,  acc: 0.74 },
+      { name: 'Gemini 3.1 Pro',    cost: 2.00,  acc: 0.72 },
+      { name: 'Claude Sonnet 4.6', cost: 3.00,  acc: 0.796 },
+      { name: 'Claude Opus 4.6',   cost: 5.00,  acc: 0.808 },
+    ]
+  },
+  math500: {
+    label: 'MATH-500',
+    sublabel: 'Competition math',
+    tokensPerQ: 800,
+    chance: 0,
+    isMC: false,
+    desc: '<strong>MATH-500</strong> — 500 competition-style mathematics problems spanning algebra, geometry, number theory and more. Open-ended answers graded for correctness. No random baseline — a wrong answer is a wrong answer. Top models are approaching saturation on this benchmark.',
+    models: [
+      { name: 'GPT-5 Nano',        cost: 0.050, acc: 0.72 },
+      { name: 'Gemini Flash-Lite', cost: 0.075, acc: 0.75 },
+      { name: 'Llama 4 Maverick',  cost: 0.10,  acc: 0.78 },
+      { name: 'DeepSeek V3.2',     cost: 0.14,  acc: 0.88 },
+      { name: 'Grok 4.1',          cost: 0.20,  acc: 0.90 },
+      { name: 'Gemini 2.5 Flash',  cost: 0.30,  acc: 0.92 },
+      { name: 'Claude Haiku 4.5',  cost: 1.00,  acc: 0.85 },
+      { name: 'GPT-5',             cost: 1.25,  acc: 0.94 },
+      { name: 'GPT-5.2',           cost: 1.75,  acc: 0.97 },
+      { name: 'Gemini 3.1 Pro',    cost: 2.00,  acc: 0.97 },
+      { name: 'Claude Sonnet 4.6', cost: 3.00,  acc: 0.966 },
+      { name: 'Claude Opus 4.6',   cost: 5.00,  acc: 0.968 },
+    ]
+  },
+  mmlu: {
+    label: 'MMLU-Pro',
+    sublabel: 'Broad knowledge',
+    tokensPerQ: 600,
+    chance: 0.10,
+    isMC: true,
+    desc: '<strong>MMLU-Pro</strong> — 12,000 graduate-level questions across 14 subject areas. 10-choice multiple choice (harder than original MMLU\'s 4-choice), so random guessing = 10%. Tests breadth across STEM, law, medicine, social sciences. Benchmark is approaching saturation at the top.',
+    models: [
+      { name: 'GPT-5 Nano',        cost: 0.050, acc: 0.62 },
+      { name: 'Gemini Flash-Lite', cost: 0.075, acc: 0.65 },
+      { name: 'Llama 4 Maverick',  cost: 0.10,  acc: 0.72 },
+      { name: 'DeepSeek V3.2',     cost: 0.14,  acc: 0.78 },
+      { name: 'Grok 4.1',          cost: 0.20,  acc: 0.82 },
+      { name: 'Gemini 2.5 Flash',  cost: 0.30,  acc: 0.85 },
+      { name: 'Claude Haiku 4.5',  cost: 1.00,  acc: 0.74 },
+      { name: 'GPT-5',             cost: 1.25,  acc: 0.86 },
+      { name: 'GPT-5.2',           cost: 1.75,  acc: 0.884 },
+      { name: 'Gemini 3.1 Pro',    cost: 2.00,  acc: 0.898 },
+      { name: 'Claude Sonnet 4.6', cost: 3.00,  acc: 0.878 },
+      { name: 'Claude Opus 4.6',   cost: 5.00,  acc: 0.886 },
+    ]
+  }
+};
+let activeBench = 'gpqa';
+let activeMetric = 'raw';
+function qpd(cost, tpq) {
+  return 1 / ((cost / 1e6) * tpq);
+}
+function aboveChance(acc, chance) {
+  if (chance === 0) return acc;
+  return Math.max(0, (acc - chance) / (1 - chance));
+}
+function seededRandom(seed) {
+  let s = seed >>> 0;
+  return function() {
+    s = Math.imul(1664525, s) + 1013904223 >>> 0;
+    return s / 0x100000000;
+  };
+}
+const tabsEl = document.getElementById('benchTabs');
+Object.entries(BENCHMARKS).forEach(([key, b]) => {
+  const btn = document.createElement('button');
+  btn.className = 'tab-btn' + (key === activeBench ? ' active' : '');
+  btn.innerHTML = `${b.label}<br><span style="font-size:9px;opacity:0.7;">${b.sublabel}</span>`;
+  btn.onclick = () => setBench(key);
+  tabsEl.appendChild(btn);
+});
+function setBench(key) {
+  activeBench = key;
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', Object.keys(BENCHMARKS)[i] === key);
+  });
+  const bench = BENCHMARKS[key];
+  const adjBtn = document.getElementById('btn-adj');
+  if (!bench.isMC) {
+    adjBtn.disabled = true;
+    adjBtn.style.opacity = '0.35';
+    adjBtn.style.cursor = 'not-allowed';
+    if (activeMetric === 'adj') setMetric('raw');
+  } else {
+    adjBtn.disabled = false;
+    adjBtn.style.opacity = '1';
+    adjBtn.style.cursor = 'pointer';
+  }
+  document.getElementById('benchDesc').innerHTML = bench.desc;
+  draw();
+}
+function setMetric(m) {
+  activeMetric = m;
+  document.getElementById('btn-raw').classList.toggle('active', m === 'raw');
+  document.getElementById('btn-adj').classList.toggle('active', m === 'adj');
+  draw();
+}
+function draw() {
+  const bench = BENCHMARKS[activeBench];
+  const canvas = document.getElementById('mainCanvas');
+  const dpr = window.devicePixelRatio || 1;
+  const GREEN = '#2d8a5a';
+  const RED   = '#c84040';
+  const sorted = [...bench.models].sort((a, b) => qpd(b.cost, bench.tokensPerQ) - qpd(a.cost, bench.tokensPerQ));
+  const LABEL_W = 155;
+  const BAR_H = 30;
+  const ROWS = 3;
+  const ROW_GAP = 10;
+  const BLOCK_W = 6;
+  const BLOCK_GAP = 1;
+  const TOP_PAD = 30;
+  const BOT_PAD = 40;
+  const RIGHT_PAD = 70;
+  const totalH = TOP_PAD + sorted.length * (BAR_H + ROW_GAP) + BOT_PAD;
+  const cssW = canvas.parentElement ? canvas.parentElement.clientWidth : 800;
+  canvas.style.height = totalH + 'px';
+  canvas.width = cssW * dpr;
+  canvas.height = totalH * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const CHART_W = cssW - LABEL_W - RIGHT_PAD;
+  const textColor = '#3a2e1e';
+  const gridColor = 'rgba(0,0,0,0.07)';
+  const maxVal = Math.max(...sorted.map(m => qpd(m.cost, bench.tokensPerQ)));
+  const ticks = 5;
+  ctx.font = '11px JetBrains Mono, monospace';
+  for (let i = 0; i <= ticks; i++) {
+    const v = (maxVal / ticks) * i;
+    const x = LABEL_W + (v / maxVal) * CHART_W;
+    ctx.strokeStyle = gridColor;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x, TOP_PAD - 10);
+    ctx.lineTo(x, TOP_PAD + sorted.length * (BAR_H + ROW_GAP));
+    ctx.stroke();
+    ctx.fillStyle = textColor;
+    ctx.textAlign = 'center';
+    ctx.fillText(v < 10 ? v.toFixed(1) : Math.round(v).toLocaleString(), x, TOP_PAD - 12);
+  }
+  sorted.forEach((m, i) => {
+    const y = TOP_PAD + i * (BAR_H + ROW_GAP);
+    const rawAcc = m.acc;
+    const acc = activeMetric === 'adj' ? aboveChance(rawAcc, bench.chance) : rawAcc;
+    const wrongRate = 1 - acc;
+    const totalQpd = qpd(m.cost, bench.tokensPerQ);
+    const barW = (totalQpd / maxVal) * CHART_W;
+    ctx.font = '12px JetBrains Mono, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillStyle = textColor;
+    ctx.fillText(m.name, LABEL_W - 8, y + BAR_H / 2 + 4);
+    const subH = Math.floor(BAR_H / ROWS);
+    for (let row = 0; row < ROWS; row++) {
+      const ry = y + row * subH;
+      const rh = row === ROWS - 1 ? BAR_H - (ROWS - 1) * subH : subH;
+      const blockCount = Math.floor(barW / (BLOCK_W + BLOCK_GAP));
+      if (blockCount === 0) continue;
+      const redCount = Math.round(wrongRate * blockCount);
+      const rng = seededRandom(i * 997 + row * 113 + Math.round(acc * 317));
+      const blocks = new Array(blockCount).fill(false);
+      let placed = 0;
+      while (placed < redCount) {
+        const idx = Math.floor(rng() * blockCount);
+        if (!blocks[idx]) { blocks[idx] = true; placed++; }
+      }
+      for (let b = 0; b < blockCount; b++) {
+        ctx.fillStyle = blocks[b] ? RED : GREEN;
+        ctx.fillRect(LABEL_W + b * (BLOCK_W + BLOCK_GAP), ry, BLOCK_W, rh - 1);
+      }
+    }
+    ctx.font = '11px JetBrains Mono, monospace';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = textColor;
+    const pctStr = activeMetric === 'adj' && bench.isMC
+      ? Math.round(aboveChance(rawAcc, bench.chance) * 100) + '% adj'
+      : Math.round(rawAcc * 100) + '%';
+    ctx.fillText(pctStr, LABEL_W + barW + 5, y + BAR_H / 2 + 4);
+  });
+  ctx.font = '11px JetBrains Mono, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#6b5d47';
+  ctx.fillText(
+    activeMetric === 'adj' ? 'above-chance correct answers per $1.00' : 'correct answers per $1.00',
+    LABEL_W + CHART_W / 2,
+    TOP_PAD + sorted.length * (BAR_H + ROW_GAP) + 22
+  );
+}
+setBench('gpqa');
+window.addEventListener('resize', draw);
+</script>
+</body>
+</html>
