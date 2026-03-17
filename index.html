@@ -55,6 +55,7 @@
     letter-spacing: 0.06em;
     margin-top: 14px;
   }
+  /* benchmark tabs */
   .benchmark-tabs {
     display: flex;
     gap: 0;
@@ -78,6 +79,7 @@
   .tab-btn:last-child { border-right: none; }
   .tab-btn:hover { background: var(--cream); color: var(--ink); }
   .tab-btn.active { background: var(--ink); color: var(--paper); }
+  /* metric toggle */
   .metric-row {
     display: flex;
     align-items: center;
@@ -102,6 +104,7 @@
   }
   .metric-btn:hover { border-color: var(--ink); color: var(--ink); }
   .metric-btn.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  /* benchmark description */
   .bench-desc {
     background: var(--cream);
     border-left: 3px solid var(--rust);
@@ -112,10 +115,12 @@
     line-height: 1.7;
   }
   .bench-desc strong { color: var(--ink); }
+  /* canvas */
   canvas#mainCanvas {
     display: block;
     width: 100%;
   }
+  /* legend */
   .legend {
     display: flex;
     gap: 20px;
@@ -190,8 +195,9 @@ const BENCHMARKS = {
       { name: 'Gemini 2.5 Flash',  cost: 0.30,  acc: 0.86 },
       { name: 'Claude Haiku 4.5',  cost: 1.00,  acc: 0.72 },
       { name: 'GPT-5',             cost: 1.25,  acc: 0.88 },
-      { name: 'GPT-5.2',           cost: 1.75,  acc: 0.924 },
+      { name: 'GPT-5.3 Codex',     cost: 1.75,  acc: 0.915 },
       { name: 'Gemini 3.1 Pro',    cost: 2.00,  acc: 0.941 },
+      { name: 'GPT-5.4',           cost: 2.50,  acc: 0.920 },
       { name: 'Claude Sonnet 4.6', cost: 3.00,  acc: 0.899 },
       { name: 'Claude Opus 4.6',   cost: 5.00,  acc: 0.913 },
     ]
@@ -212,8 +218,9 @@ const BENCHMARKS = {
       { name: 'Gemini 2.5 Flash',  cost: 0.30,  acc: 0.58 },
       { name: 'Claude Haiku 4.5',  cost: 1.00,  acc: 0.56 },
       { name: 'GPT-5',             cost: 1.25,  acc: 0.68 },
-      { name: 'GPT-5.2',           cost: 1.75,  acc: 0.74 },
+      { name: 'GPT-5.3 Codex',     cost: 1.75,  acc: 0.773 },
       { name: 'Gemini 3.1 Pro',    cost: 2.00,  acc: 0.72 },
+      { name: 'GPT-5.4',           cost: 2.50,  acc: 0.770 },
       { name: 'Claude Sonnet 4.6', cost: 3.00,  acc: 0.796 },
       { name: 'Claude Opus 4.6',   cost: 5.00,  acc: 0.808 },
     ]
@@ -234,8 +241,9 @@ const BENCHMARKS = {
       { name: 'Gemini 2.5 Flash',  cost: 0.30,  acc: 0.92 },
       { name: 'Claude Haiku 4.5',  cost: 1.00,  acc: 0.85 },
       { name: 'GPT-5',             cost: 1.25,  acc: 0.94 },
-      { name: 'GPT-5.2',           cost: 1.75,  acc: 0.97 },
-      { name: 'Gemini 3.1 Pro',    cost: 2.00,  acc: 0.97 },
+      { name: 'GPT-5.3 Codex',     cost: 1.75,  acc: 0.968 },
+      { name: 'Gemini 3.1 Pro',    cost: 2.00,  acc: 0.970 },
+      { name: 'GPT-5.4',           cost: 2.50,  acc: 0.972 },
       { name: 'Claude Sonnet 4.6', cost: 3.00,  acc: 0.966 },
       { name: 'Claude Opus 4.6',   cost: 5.00,  acc: 0.968 },
     ]
@@ -256,8 +264,9 @@ const BENCHMARKS = {
       { name: 'Gemini 2.5 Flash',  cost: 0.30,  acc: 0.85 },
       { name: 'Claude Haiku 4.5',  cost: 1.00,  acc: 0.74 },
       { name: 'GPT-5',             cost: 1.25,  acc: 0.86 },
-      { name: 'GPT-5.2',           cost: 1.75,  acc: 0.884 },
+      { name: 'GPT-5.3 Codex',     cost: 1.75,  acc: 0.882 },
       { name: 'Gemini 3.1 Pro',    cost: 2.00,  acc: 0.898 },
+      { name: 'GPT-5.4',           cost: 2.50,  acc: 0.886 },
       { name: 'Claude Sonnet 4.6', cost: 3.00,  acc: 0.878 },
       { name: 'Claude Opus 4.6',   cost: 5.00,  acc: 0.886 },
     ]
@@ -279,6 +288,7 @@ function seededRandom(seed) {
     return s / 0x100000000;
   };
 }
+// Build tabs
 const tabsEl = document.getElementById('benchTabs');
 Object.entries(BENCHMARKS).forEach(([key, b]) => {
   const btn = document.createElement('button');
@@ -292,6 +302,7 @@ function setBench(key) {
   document.querySelectorAll('.tab-btn').forEach((b, i) => {
     b.classList.toggle('active', Object.keys(BENCHMARKS)[i] === key);
   });
+  // disable adj button for non-MC benchmarks
   const bench = BENCHMARKS[key];
   const adjBtn = document.getElementById('btn-adj');
   if (!bench.isMC) {
@@ -317,6 +328,7 @@ function draw() {
   const bench = BENCHMARKS[activeBench];
   const canvas = document.getElementById('mainCanvas');
   const dpr = window.devicePixelRatio || 1;
+  const isDark = false; // always light for standalone HTML
   const GREEN = '#2d8a5a';
   const RED   = '#c84040';
   const sorted = [...bench.models].sort((a, b) => qpd(b.cost, bench.tokensPerQ) - qpd(a.cost, bench.tokensPerQ));
@@ -340,6 +352,7 @@ function draw() {
   const textColor = '#3a2e1e';
   const gridColor = 'rgba(0,0,0,0.07)';
   const maxVal = Math.max(...sorted.map(m => qpd(m.cost, bench.tokensPerQ)));
+  // grid ticks
   const ticks = 5;
   ctx.font = '11px JetBrains Mono, monospace';
   for (let i = 0; i <= ticks; i++) {
@@ -362,6 +375,7 @@ function draw() {
     const wrongRate = 1 - acc;
     const totalQpd = qpd(m.cost, bench.tokensPerQ);
     const barW = (totalQpd / maxVal) * CHART_W;
+    // label
     ctx.font = '12px JetBrains Mono, monospace';
     ctx.textAlign = 'right';
     ctx.fillStyle = textColor;
@@ -385,6 +399,7 @@ function draw() {
         ctx.fillRect(LABEL_W + b * (BLOCK_W + BLOCK_GAP), ry, BLOCK_W, rh - 1);
       }
     }
+    // pct label
     ctx.font = '11px JetBrains Mono, monospace';
     ctx.textAlign = 'left';
     ctx.fillStyle = textColor;
@@ -393,6 +408,7 @@ function draw() {
       : Math.round(rawAcc * 100) + '%';
     ctx.fillText(pctStr, LABEL_W + barW + 5, y + BAR_H / 2 + 4);
   });
+  // x-axis label
   ctx.font = '11px JetBrains Mono, monospace';
   ctx.textAlign = 'center';
   ctx.fillStyle = '#6b5d47';
@@ -402,6 +418,7 @@ function draw() {
     TOP_PAD + sorted.length * (BAR_H + ROW_GAP) + 22
   );
 }
+// init
 setBench('gpqa');
 window.addEventListener('resize', draw);
 </script>
